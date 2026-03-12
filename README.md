@@ -1,7 +1,3 @@
-  # Calibration Management App UI
-
-  This is a code bundle for Calibration Management App UI. The original project is available at https://www.figma.com/design/zvSMSiALApch5tx23NF2qk/Calibration-Management-App-UI.
-
   ## Running the code
 
   Run `npm i` to install the dependencies.
