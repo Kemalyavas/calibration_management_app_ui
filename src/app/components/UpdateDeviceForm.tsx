@@ -1,43 +1,124 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Home, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Home, Plus, Trash2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { devicesApi } from '../services/api';
 
 export function UpdateDeviceForm() {
   const navigate = useNavigate();
+  const [devices, setDevices] = useState<any[]>([]);
   const [selectedDevice, setSelectedDevice] = useState('');
-  const [verificationValues, setVerificationValues] = useState<string[]>(['25', '50', '75']);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
+  const [verificationValues, setVerificationValues] = useState<string[]>(['', '', '']);
   const [uncertaintyValues, setUncertaintyValues] = useState<string[]>(['', '', '']);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
-    deviceNumber: 'DEV-001',
-    deviceName: 'Pressure Gauge A',
-    brand: 'Omega',
-    model: 'PGT-100',
-    manufacturer: 'Omega Engineering',
-    unit: 'PSI',
-    locationOfUse: 'Production Line 1',
-    machineName: 'Mixer 01',
-    procedureNumber: 'PROC-2024-001',
-    calibratedBy: 'John Smith',
-    measurementAccuracy: '±0.5%',
-    referenceCode: 'REF-001',
-    initialCalibrationFrequency: '6 months',
-    calibrationFrequency: '6 months',
-    calibrationDate: '2024-06-01',
-    nextCalibrationDate: '2024-12-01',
+    deviceNumber: '',
+    deviceName: '',
+    brand: '',
+    model: '',
+    manufacturer: '',
+    unit: '',
+    locationOfUse: '',
+    machineName: '',
+    machineId: '' as string,
+    procedureNumber: '',
+    calibratedBy: '',
+    measurementAccuracy: '',
+    referenceCode: '',
+    initialCalibrationFrequency: '',
+    calibrationFrequency: '',
+    calibrationDate: '',
+    nextCalibrationDate: '',
     deviceType: 'test',
     minMeasurementRange: '0',
-    maxMeasurementRange: '100',
-    technicalTolerance: '±1%',
+    maxMeasurementRange: '0',
+    technicalTolerance: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    devicesApi.list({ pageSize: '100' }).then(d => setDevices(d.items));
+  }, []);
+
+  const handleDeviceSelect = (deviceId: string) => {
+    setSelectedDevice(deviceId);
+    const device = devices.find((d: any) => d.id === parseInt(deviceId));
+    if (!device) return;
+    setSelectedDeviceId(device.id);
+
+    const vv = (device.verificationValues || []).filter((v: any) => v != null).map((v: any) => v.toString());
+    const uv = (device.uncertaintyValues || []).filter((v: any) => v != null).map((v: any) => v.toString());
+    setVerificationValues(vv.length > 0 ? vv : ['']);
+    setUncertaintyValues(uv.length > 0 ? uv : ['']);
+
+    setFormData({
+      deviceNumber: device.deviceCode || '',
+      deviceName: device.deviceName || '',
+      brand: device.brand || '',
+      model: device.model || '',
+      manufacturer: device.manufacturer || '',
+      unit: device.unit || '',
+      locationOfUse: device.locationOfUse || '',
+      machineName: device.machineName || '',
+      machineId: device.machineId?.toString() || '',
+      procedureNumber: device.procedureNumber || '',
+      calibratedBy: device.calibratedBy || '',
+      measurementAccuracy: device.measurementAccuracy || '',
+      referenceCode: device.referenceCode || '',
+      initialCalibrationFrequency: device.calibrationFrequency || '',
+      calibrationFrequency: device.calibrationFrequency || '',
+      calibrationDate: device.calibrationDate ? new Date(device.calibrationDate).toISOString().split('T')[0] : '',
+      nextCalibrationDate: device.nextCalibrationDate ? new Date(device.nextCalibrationDate).toISOString().split('T')[0] : '',
+      deviceType: device.deviceType || 'test',
+      minMeasurementRange: device.minRange?.toString() || '0',
+      maxMeasurementRange: device.maxRange?.toString() || '0',
+      technicalTolerance: device.technicalTolerance || '',
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Device updated and submitted for approval!');
-    navigate('/dashboard');
+    if (!selectedDeviceId) return;
+    setSubmitting(true);
+
+    try {
+      await devicesApi.update(selectedDeviceId, {
+        deviceCode: formData.deviceNumber,
+        deviceName: formData.deviceName,
+        deviceType: formData.deviceType,
+        brand: formData.brand || null,
+        model: formData.model || null,
+        manufacturer: formData.manufacturer || null,
+        unit: formData.unit || null,
+        locationOfUse: formData.locationOfUse || null,
+        machineId: formData.machineId ? parseInt(formData.machineId) : null,
+        procedureNumber: formData.procedureNumber || null,
+        calibratedBy: formData.calibratedBy || null,
+        measurementAccuracy: formData.measurementAccuracy || null,
+        referenceCode: formData.referenceCode || null,
+        calibrationFrequency: formData.calibrationFrequency || null,
+        calibrationDate: formData.calibrationDate || null,
+        nextCalibrationDate: formData.nextCalibrationDate || null,
+        minRange: parseFloat(formData.minMeasurementRange) || 0,
+        maxRange: parseFloat(formData.maxMeasurementRange) || 0,
+        technicalTolerance: formData.technicalTolerance || null,
+        verificationValues: verificationValues.map(v => v ? parseFloat(v) : null),
+        toleranceValues: verificationValues.map(() => 0),
+        uncertaintyValues: formData.deviceType === 'reference'
+          ? uncertaintyValues.map(v => v ? parseFloat(v) : null)
+          : verificationValues.map(() => null),
+      });
+
+      alert('Cihaz güncellendi ve onaya gönderildi!');
+      navigate('/device-list');
+    } catch (err: any) {
+      alert('Hata: ' + (err.message || 'Güncelleme başarısız'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -52,11 +133,11 @@ export function UpdateDeviceForm() {
             <ArrowLeft className="w-6 h-6" />
             <span className="text-lg font-medium">Geri</span>
           </button>
-          
+
           <h1 className="text-4xl font-bold text-[#1F2A44]">
             Cihaz Güncelle
           </h1>
-          
+
           <button
             onClick={() => navigate('/')}
             className="flex items-center justify-center w-12 h-12 bg-[#1F2A44] hover:bg-[#2d3d5f] rounded-full transition-colors"
@@ -69,14 +150,16 @@ export function UpdateDeviceForm() {
         <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
           <div className="space-y-2">
             <Label htmlFor="deviceSelector">Güncellenecek Cihazı Seçin</Label>
-            <Select value={selectedDevice} onValueChange={setSelectedDevice}>
+            <Select value={selectedDevice} onValueChange={handleDeviceSelect}>
               <SelectTrigger className="h-12 bg-gray-50 rounded-lg">
                 <SelectValue placeholder="Bir cihaz seçin" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="dev1">DEV-001 - Basınç Ölçer A</SelectItem>
-                <SelectItem value="dev2">DEV-002 - Sıcaklık Sensörü B</SelectItem>
-                <SelectItem value="dev3">DEV-003 - Terazi Ünitesi C</SelectItem>
+                {devices.map((device: any) => (
+                  <SelectItem key={device.id} value={device.id.toString()}>
+                    {device.deviceCode} - {device.deviceName}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -89,112 +172,43 @@ export function UpdateDeviceForm() {
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="deviceNumber">Cihaz Numarası</Label>
-                <Input
-                  id="deviceNumber"
-                  value={formData.deviceNumber}
-                  onChange={(e) => setFormData({...formData, deviceNumber: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="deviceNumber" value={formData.deviceNumber} onChange={(e) => setFormData({...formData, deviceNumber: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="deviceName">Cihaz Adı</Label>
-                <Input
-                  id="deviceName"
-                  value={formData.deviceName}
-                  onChange={(e) => setFormData({...formData, deviceName: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="deviceName" value={formData.deviceName} onChange={(e) => setFormData({...formData, deviceName: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="brand">Marka</Label>
-                <Input
-                  id="brand"
-                  value={formData.brand}
-                  onChange={(e) => setFormData({...formData, brand: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="brand" value={formData.brand} onChange={(e) => setFormData({...formData, brand: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="model">Model</Label>
-                <Input
-                  id="model"
-                  value={formData.model}
-                  onChange={(e) => setFormData({...formData, model: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="model" value={formData.model} onChange={(e) => setFormData({...formData, model: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="manufacturer">Üretici</Label>
-                <Input
-                  id="manufacturer"
-                  value={formData.manufacturer}
-                  onChange={(e) => setFormData({...formData, manufacturer: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="manufacturer" value={formData.manufacturer} onChange={(e) => setFormData({...formData, manufacturer: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="unit">Birim</Label>
-                <Input
-                  id="unit"
-                  value={formData.unit}
-                  onChange={(e) => setFormData({...formData, unit: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="unit" value={formData.unit} onChange={(e) => setFormData({...formData, unit: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="locationOfUse">Kullanım Yeri</Label>
-                <Input
-                  id="locationOfUse"
-                  value={formData.locationOfUse}
-                  onChange={(e) => setFormData({...formData, locationOfUse: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="locationOfUse" value={formData.locationOfUse} onChange={(e) => setFormData({...formData, locationOfUse: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="machineName">Makine Adı</Label>
-                <Input
-                  id="machineName"
-                  value={formData.machineName}
-                  onChange={(e) => setFormData({...formData, machineName: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="procedureNumber">Prosedür Numarası</Label>
-                <Input
-                  id="procedureNumber"
-                  value={formData.procedureNumber}
-                  onChange={(e) => setFormData({...formData, procedureNumber: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="procedureNumber" value={formData.procedureNumber} onChange={(e) => setFormData({...formData, procedureNumber: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="calibratedBy">Kalibrasyonu Yapan</Label>
-                <Input
-                  id="calibratedBy"
-                  value={formData.calibratedBy}
-                  onChange={(e) => setFormData({...formData, calibratedBy: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="calibratedBy" value={formData.calibratedBy} onChange={(e) => setFormData({...formData, calibratedBy: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="measurementAccuracy">Ölçüm Hassasiyeti</Label>
-                <Input
-                  id="measurementAccuracy"
-                  value={formData.measurementAccuracy}
-                  onChange={(e) => setFormData({...formData, measurementAccuracy: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="measurementAccuracy" value={formData.measurementAccuracy} onChange={(e) => setFormData({...formData, measurementAccuracy: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
             </div>
 
@@ -202,142 +216,63 @@ export function UpdateDeviceForm() {
             <div className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="referenceCode">Referans Kodu</Label>
-                <Input
-                  id="referenceCode"
-                  value={formData.referenceCode}
-                  onChange={(e) => setFormData({...formData, referenceCode: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="referenceCode" value={formData.referenceCode} onChange={(e) => setFormData({...formData, referenceCode: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="initialCalibrationFrequency">Başlangıç Kalibrasyon Frekansı</Label>
-                <Input
-                  id="initialCalibrationFrequency"
-                  value={formData.initialCalibrationFrequency}
-                  onChange={(e) => setFormData({...formData, initialCalibrationFrequency: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="calibrationFrequency">Kalibrasyon Frekansı</Label>
-                <Input
-                  id="calibrationFrequency"
-                  value={formData.calibrationFrequency}
-                  onChange={(e) => setFormData({...formData, calibrationFrequency: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="calibrationFrequency" value={formData.calibrationFrequency} onChange={(e) => setFormData({...formData, calibrationFrequency: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="calibrationDate">Kalibrasyon Tarihi</Label>
-                <Input
-                  id="calibrationDate"
-                  type="date"
-                  value={formData.calibrationDate}
-                  onChange={(e) => setFormData({...formData, calibrationDate: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="calibrationDate" type="date" value={formData.calibrationDate} onChange={(e) => setFormData({...formData, calibrationDate: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="nextCalibrationDate">Sonraki Kalibrasyon Tarihi</Label>
-                <Input
-                  id="nextCalibrationDate"
-                  type="date"
-                  value={formData.nextCalibrationDate}
-                  onChange={(e) => setFormData({...formData, nextCalibrationDate: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="nextCalibrationDate" type="date" value={formData.nextCalibrationDate} onChange={(e) => setFormData({...formData, nextCalibrationDate: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="deviceType">Cihaz Tipi</Label>
                 <Select value={formData.deviceType} onValueChange={(value) => setFormData({...formData, deviceType: value})}>
-                  <SelectTrigger className="h-12 bg-gray-50 rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="h-12 bg-gray-50 rounded-lg"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="reference">Referans Cihaz</SelectItem>
                     <SelectItem value="test">Test Cihaz</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="minMeasurementRange">Minimum Ölçüm Aralığı</Label>
-                <Input
-                  id="minMeasurementRange"
-                  value={formData.minMeasurementRange}
-                  onChange={(e) => setFormData({...formData, minMeasurementRange: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="minMeasurementRange" value={formData.minMeasurementRange} onChange={(e) => setFormData({...formData, minMeasurementRange: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="maxMeasurementRange">Maksimum Ölçüm Aralığı</Label>
-                <Input
-                  id="maxMeasurementRange"
-                  value={formData.maxMeasurementRange}
-                  onChange={(e) => setFormData({...formData, maxMeasurementRange: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="maxMeasurementRange" value={formData.maxMeasurementRange} onChange={(e) => setFormData({...formData, maxMeasurementRange: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="technicalTolerance">Teknik Tolerans</Label>
-                <Input
-                  id="technicalTolerance"
-                  value={formData.technicalTolerance}
-                  onChange={(e) => setFormData({...formData, technicalTolerance: e.target.value})}
-                  className="h-12 bg-gray-50 rounded-lg"
-                />
+                <Input id="technicalTolerance" value={formData.technicalTolerance} onChange={(e) => setFormData({...formData, technicalTolerance: e.target.value})} className="h-12 bg-gray-50 rounded-lg" />
               </div>
 
-              {/* Dinamik Doğrulama Değerleri */}
+              {/* Doğrulama Değerleri */}
               <div className="p-5 bg-blue-50 rounded-xl border-2 border-blue-200 space-y-3">
                 <div className="flex items-center justify-between mb-1">
                   <div>
                     <h4 className="font-bold text-[#1F2A44]">Doğrulama Değerleri</h4>
                     <p className="text-xs text-gray-500 mt-0.5">Kalibrasyon sırasında kullanılacak referans noktaları</p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setVerificationValues(prev => [...prev, '']);
-                      setUncertaintyValues(prev => [...prev, '']);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-2 bg-[#1F2A44] text-white rounded-lg hover:bg-[#2d3d5f] transition-colors text-sm font-semibold"
-                  >
-                    <Plus size={16} />
-                    Değer Ekle
+                  <button type="button" onClick={() => { setVerificationValues(prev => [...prev, '']); setUncertaintyValues(prev => [...prev, '']); }}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-[#1F2A44] text-white rounded-lg hover:bg-[#2d3d5f] transition-colors text-sm font-semibold">
+                    <Plus size={16} /> Değer Ekle
                   </button>
                 </div>
                 {verificationValues.map((val, idx) => (
                   <div key={idx} className="flex items-center gap-2">
-                    <span className="w-7 h-7 flex items-center justify-center bg-[#1F2A44] text-white rounded-full text-xs font-bold flex-shrink-0">
-                      {idx + 1}
-                    </span>
-                    <Input
-                      value={val}
-                      onChange={(e) => {
-                        const updated = [...verificationValues];
-                        updated[idx] = e.target.value;
-                        setVerificationValues(updated);
-                      }}
-                      className="h-11 bg-white rounded-lg flex-1"
-                      placeholder={`Doğrulama değeri ${idx + 1}`}
-                    />
+                    <span className="w-7 h-7 flex items-center justify-center bg-[#1F2A44] text-white rounded-full text-xs font-bold flex-shrink-0">{idx + 1}</span>
+                    <Input value={val} onChange={(e) => { const u = [...verificationValues]; u[idx] = e.target.value; setVerificationValues(u); }}
+                      className="h-11 bg-white rounded-lg flex-1" placeholder={`Doğrulama değeri ${idx + 1}`} />
                     {verificationValues.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setVerificationValues(prev => prev.filter((_, i) => i !== idx));
-                          setUncertaintyValues(prev => prev.filter((_, i) => i !== idx));
-                        }}
-                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
+                      <button type="button" onClick={() => { setVerificationValues(prev => prev.filter((_, i) => i !== idx)); setUncertaintyValues(prev => prev.filter((_, i) => i !== idx)); }}
+                        className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                         <Trash2 size={16} />
                       </button>
                     )}
@@ -345,38 +280,20 @@ export function UpdateDeviceForm() {
                 ))}
               </div>
 
-              {/* Belirsizlik Değerleri (Referans Cihaz için) */}
+              {/* Belirsizlik Değerleri */}
               {formData.deviceType === 'reference' && (
                 <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border-2 border-purple-300 space-y-4">
                   <div className="flex items-center gap-2 mb-2">
                     <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse"></div>
                     <h3 className="text-xl font-bold text-[#1F2A44]">Referans Cihaz Belirsizlik Değerleri</h3>
                   </div>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Her doğrulama noktasına karşılık gelen belirsizlik değeri. Doğrulama değeri eklendiğinde otomatik eklenir.
-                  </p>
                   {uncertaintyValues.map((uVal, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <span className="w-7 h-7 flex items-center justify-center bg-purple-600 text-white rounded-full text-xs font-bold flex-shrink-0">
-                        {idx + 1}
-                      </span>
+                      <span className="w-7 h-7 flex items-center justify-center bg-purple-600 text-white rounded-full text-xs font-bold flex-shrink-0">{idx + 1}</span>
                       <div className="flex-1">
-                        <Label className="text-xs text-gray-500 mb-1 block">
-                          Belirsizlik Değeri {idx + 1}
-                          {verificationValues[idx] ? ` (${verificationValues[idx]}'de)` : ''}
-                        </Label>
-                        <Input
-                          type="number"
-                          step="0.0000001"
-                          value={uVal}
-                          onChange={(e) => {
-                            const updated = [...uncertaintyValues];
-                            updated[idx] = e.target.value;
-                            setUncertaintyValues(updated);
-                          }}
-                          className="h-11 bg-white rounded-lg"
-                          placeholder="Örn: 0.5"
-                        />
+                        <Label className="text-xs text-gray-500 mb-1 block">Belirsizlik Değeri {idx + 1}{verificationValues[idx] ? ` (${verificationValues[idx]}'de)` : ''}</Label>
+                        <Input type="number" step="0.0000001" value={uVal} onChange={(e) => { const u = [...uncertaintyValues]; u[idx] = e.target.value; setUncertaintyValues(u); }}
+                          className="h-11 bg-white rounded-lg" placeholder="Örn: 0.5" />
                       </div>
                     </div>
                   ))}
@@ -385,13 +302,11 @@ export function UpdateDeviceForm() {
             </div>
           </div>
 
-          {/* Submit Button */}
+          {/* Submit */}
           <div className="mt-8 flex justify-center">
-            <Button
-              type="submit"
-              className="h-14 px-12 text-lg bg-[#1F2A44] hover:bg-[#2d3d5f] rounded-xl"
-            >
-              Onaya Gönder
+            <Button type="submit" disabled={submitting || !selectedDeviceId} className="h-14 px-12 text-lg bg-[#1F2A44] hover:bg-[#2d3d5f] rounded-xl">
+              {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+              {submitting ? 'Gönderiliyor...' : 'Onaya Gönder'}
             </Button>
           </div>
         </form>

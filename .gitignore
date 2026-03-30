@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+backend/src/CalibrationApi.API/bin/
+backend/src/CalibrationApi.API/obj/
+backend/src/CalibrationApi.Core/bin/
+backend/src/CalibrationApi.Core/obj/
+backend/src/CalibrationApi.Infrastructure/bin/
+backend/src/CalibrationApi.Infrastructure/obj/
+backend/src/CalibrationApi.Infrastructure/Migrations/
+backend/uploads/

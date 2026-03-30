@@ -1,96 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Home, Copy, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Home, Copy, Plus, Trash2, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Checkbox } from './ui/checkbox';
-
-// Mock cihaz verileri - kopyalama için
-const existingDevices = [
-  {
-    deviceNumber: 'A002',
-    deviceName: 'BASINÇ ÖLÇER',
-    brand: 'Wika',
-    model: 'P-30',
-    manufacturer: 'Wika Instruments',
-    unit: 'PSI',
-    locationOfUse: 'Hat 2',
-    machineName: 'BANBURY 9',
-    procedureNumber: 'PR-001',
-    calibratedBy: 'Kalibrasyon Lab',
-    measurementAccuracy: '±0.5 PSI',
-    referenceCode: 'REF-PRESS-001',
-    initialCalibrationFrequency: '6 ay',
-    calibrationFrequency: '6 ay',
-    calibrationDate: '2025-08-23',
-    nextCalibrationDate: '2026-02-23',
-    deviceType: 'test',
-    minMeasurementRange: '0',
-    maxMeasurementRange: '100',
-    technicalTolerance: '±1%',
-    verificationValue1: '25',
-    verificationValue2: '50',
-    verificationValue3: '75',
-  },
-  {
-    deviceNumber: 'B007',
-    deviceName: 'Uzunluk Ölçer',
-    brand: 'Mitutoyo',
-    model: 'CD-15DCX',
-    manufacturer: 'Mitutoyo Corporation',
-    unit: 'mm',
-    locationOfUse: 'Hat 3',
-    machineName: '3 TRAFILA',
-    procedureNumber: 'PR-005',
-    calibratedBy: 'Kalibrasyon Lab',
-    measurementAccuracy: '±0.01 mm',
-    referenceCode: 'REF-LEN-003',
-    initialCalibrationFrequency: '12 ay',
-    calibrationFrequency: '6 ay',
-    calibrationDate: '2025-09-15',
-    nextCalibrationDate: '2026-03-15',
-    deviceType: 'test',
-    minMeasurementRange: '0',
-    maxMeasurementRange: '150',
-    technicalTolerance: '±0.02 mm',
-    verificationValue1: '50',
-    verificationValue2: '100',
-    verificationValue3: '150',
-  },
-  {
-    deviceNumber: 'C001',
-    deviceName: 'pH Ölçer',
-    brand: 'Mettler Toledo',
-    model: 'SevenCompact S220',
-    manufacturer: 'Mettler Toledo',
-    unit: 'pH',
-    locationOfUse: 'Kimya Lab',
-    machineName: 'MIXER 01',
-    procedureNumber: 'PR-008',
-    calibratedBy: 'Kalibrasyon Lab',
-    measurementAccuracy: '±0.01 pH',
-    referenceCode: 'REF-PH-001',
-    initialCalibrationFrequency: '6 ay',
-    calibrationFrequency: '6 ay',
-    calibrationDate: '2025-08-19',
-    nextCalibrationDate: '2026-02-19',
-    deviceType: 'test',
-    minMeasurementRange: '0',
-    maxMeasurementRange: '14',
-    technicalTolerance: '±0.02 pH',
-    verificationValue1: '4',
-    verificationValue2: '7',
-    verificationValue3: '10',
-  },
-];
+import { devicesApi, lookupApi } from '../services/api';
 
 export function AddDeviceForm() {
   const navigate = useNavigate();
   const [isReferenceDevice, setIsReferenceDevice] = useState(false);
   const [verificationValues, setVerificationValues] = useState<string[]>(['', '', '']);
   const [uncertaintyValues, setUncertaintyValues] = useState<string[]>(['', '', '']);
+  const [existingDevices, setExistingDevices] = useState<any[]>([]);
+  const [machines, setMachines] = useState<{ id: number; name: string }[]>([]);
+  const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     deviceNumber: '',
     deviceName: '',
@@ -100,6 +25,7 @@ export function AddDeviceForm() {
     unit: '',
     locationOfUse: '',
     machineName: '',
+    machineId: '' as string,
     procedureNumber: '',
     calibratedBy: '',
     measurementAccuracy: '',
@@ -117,33 +43,41 @@ export function AddDeviceForm() {
     uncertainty3: '',
   });
 
-  const handleCopyDevice = (deviceCode: string) => {
-    const device = existingDevices.find(d => d.deviceNumber === deviceCode);
+  useEffect(() => {
+    devicesApi.list({ pageSize: '100' }).then(d => setExistingDevices(d.items));
+    lookupApi.machines().then(m => setMachines(m));
+  }, []);
+
+  const handleCopyDevice = (deviceId: string) => {
+    const device = existingDevices.find((d: any) => d.id === parseInt(deviceId));
     if (device) {
-      setVerificationValues([device.verificationValue1, device.verificationValue2, device.verificationValue3]);
-      setUncertaintyValues(['', '', '']);
+      const vv = device.verificationValues || [];
+      setVerificationValues(vv.map((v: any) => v?.toString() || ''));
+      const uv = device.uncertaintyValues || [];
+      setUncertaintyValues(uv.map((v: any) => v?.toString() || ''));
       setIsReferenceDevice(device.deviceType === 'reference');
       setFormData({
         deviceNumber: '',
-        deviceName: device.deviceName,
-        brand: device.brand,
-        model: device.model,
-        manufacturer: device.manufacturer,
-        unit: device.unit,
-        locationOfUse: device.locationOfUse,
-        machineName: device.machineName,
-        procedureNumber: device.procedureNumber,
-        calibratedBy: device.calibratedBy,
-        measurementAccuracy: device.measurementAccuracy,
-        referenceCode: device.referenceCode,
-        initialCalibrationFrequency: device.initialCalibrationFrequency,
-        calibrationFrequency: device.calibrationFrequency,
-        calibrationDate: device.calibrationDate,
-        nextCalibrationDate: device.nextCalibrationDate,
-        deviceType: device.deviceType,
-        minMeasurementRange: device.minMeasurementRange,
-        maxMeasurementRange: device.maxMeasurementRange,
-        technicalTolerance: device.technicalTolerance,
+        deviceName: device.deviceName || '',
+        brand: device.brand || '',
+        model: device.model || '',
+        manufacturer: device.manufacturer || '',
+        unit: device.unit || '',
+        locationOfUse: device.locationOfUse || '',
+        machineName: device.machineName || '',
+        machineId: device.machineId?.toString() || '',
+        procedureNumber: device.procedureNumber || '',
+        calibratedBy: device.calibratedBy || '',
+        measurementAccuracy: device.measurementAccuracy || '',
+        referenceCode: device.referenceCode || '',
+        initialCalibrationFrequency: device.calibrationFrequency || '',
+        calibrationFrequency: device.calibrationFrequency || '',
+        calibrationDate: device.calibrationDate ? new Date(device.calibrationDate).toISOString().split('T')[0] : '',
+        nextCalibrationDate: device.nextCalibrationDate ? new Date(device.nextCalibrationDate).toISOString().split('T')[0] : '',
+        deviceType: device.deviceType || 'test',
+        minMeasurementRange: device.minRange?.toString() || '0',
+        maxMeasurementRange: device.maxRange?.toString() || '0',
+        technicalTolerance: device.technicalTolerance || '',
         uncertainty1: '',
         uncertainty2: '',
         uncertainty3: '',
@@ -151,10 +85,46 @@ export function AddDeviceForm() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Cihaz başarıyla eklendi!');
-    navigate('/dashboard');
+    setSubmitting(true);
+
+    try {
+      const toleranceValues = verificationValues.map(() => 0);
+      const uncertaintyVals = uncertaintyValues.map(v => v ? parseFloat(v) : null);
+
+      await devicesApi.create({
+        deviceCode: formData.deviceNumber,
+        deviceName: formData.deviceName,
+        deviceType: isReferenceDevice ? 'reference' : 'test',
+        brand: formData.brand || null,
+        model: formData.model || null,
+        manufacturer: formData.manufacturer || null,
+        unit: formData.unit || null,
+        locationOfUse: formData.locationOfUse || null,
+        machineId: formData.machineId ? parseInt(formData.machineId) : null,
+        procedureNumber: formData.procedureNumber || null,
+        calibratedBy: formData.calibratedBy || null,
+        measurementAccuracy: formData.measurementAccuracy || null,
+        referenceCode: formData.referenceCode || null,
+        calibrationFrequency: formData.calibrationFrequency || null,
+        calibrationDate: formData.calibrationDate || null,
+        nextCalibrationDate: formData.nextCalibrationDate || null,
+        minRange: parseFloat(formData.minMeasurementRange) || 0,
+        maxRange: parseFloat(formData.maxMeasurementRange) || 0,
+        technicalTolerance: formData.technicalTolerance || null,
+        verificationValues: verificationValues.map(v => v ? parseFloat(v) : null),
+        toleranceValues: toleranceValues,
+        uncertaintyValues: isReferenceDevice ? uncertaintyVals : toleranceValues.map(() => null),
+      });
+
+      alert('Cihaz başarıyla eklendi ve onaya gönderildi!');
+      navigate('/dashboard');
+    } catch (err: any) {
+      alert('Hata: ' + (err.message || 'Kayıt başarısız'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -200,9 +170,9 @@ export function AddDeviceForm() {
                 <SelectValue placeholder="Kopyalanacak cihazı seçin..." />
               </SelectTrigger>
               <SelectContent>
-                {existingDevices.map((device) => (
-                  <SelectItem key={device.deviceNumber} value={device.deviceNumber}>
-                    {device.deviceNumber} - {device.deviceName}
+                {existingDevices.map((device: any) => (
+                  <SelectItem key={device.id} value={device.id.toString()}>
+                    {device.deviceCode} - {device.deviceName}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -560,9 +530,11 @@ export function AddDeviceForm() {
           <div className="mt-8 flex justify-center">
             <Button
               type="submit"
+              disabled={submitting}
               className="h-14 px-12 text-lg bg-[#1F2A44] hover:bg-[#2d3d5f] rounded-xl"
             >
-              Cihaz Ekle
+              {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+              {submitting ? 'Ekleniyor...' : 'Cihaz Ekle'}
             </Button>
           </div>
         </form>

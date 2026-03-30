@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Home } from 'lucide-react';
+import { ArrowLeft, Home, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -10,7 +10,7 @@ import { DeviceInfoCard } from './calibration/DeviceInfoCard';
 import { EnvironmentConditions } from './calibration/EnvironmentConditions';
 import { ReferenceDeviceInfo } from './calibration/ReferenceDeviceInfo';
 import { FileUploadSection } from './calibration/FileUploadSection';
-import { referenceDevices, testDevices } from '../constants/calibrationData';
+import { devicesApi, calibrationsApi, filesApi } from '../services/api';
 
 interface CalibrationFormData {
   deviceNumber: string;
@@ -125,40 +125,52 @@ export function CalibrationEntry() {
   const [formData, setFormData] = useState<CalibrationFormData>(INITIAL_FORM_DATA);
   const [measurements, setMeasurements] = useState<MeasurementValues>(INITIAL_MEASUREMENTS);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [testDevices, setTestDevices] = useState<any[]>([]);
+  const [referenceDevices, setReferenceDevices] = useState<any[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<number | null>(null);
+  const [selectedRefDeviceId, setSelectedRefDeviceId] = useState<number | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    devicesApi.list({ deviceType: 'test', pageSize: '100' }).then(d => setTestDevices(d.items));
+    devicesApi.list({ deviceType: 'reference', pageSize: '100' }).then(d => setReferenceDevices(d.items));
+  }, []);
 
   const handleDeviceSelection = (deviceId: string) => {
-    const selectedDevice = testDevices.find(d => d.id === deviceId);
-    const defaultReferenceDevice = referenceDevices[0];
+    const device = testDevices.find((d: any) => d.id === parseInt(deviceId));
+    const defaultRef = referenceDevices[0];
 
-    if (selectedDevice && defaultReferenceDevice) {
+    if (device) {
+      setSelectedDeviceId(device.id);
+      setSelectedRefDeviceId(defaultRef?.id || null);
       setFormData({
         ...formData,
-        deviceNumber: selectedDevice.id,
-        deviceName: selectedDevice.name,
-        calibrationFrequency: selectedDevice.calibrationFrequency,
-        lastCalibrationDate: selectedDevice.lastCalibrationDate,
-        minRange: selectedDevice.minRange,
-        maxRange: selectedDevice.maxRange,
-        verificationValue1: selectedDevice.verificationValue1,
-        verificationValue2: selectedDevice.verificationValue2,
-        verificationValue3: selectedDevice.verificationValue3,
-        verificationValue4: selectedDevice.verificationValue4,
-        verificationValue5: selectedDevice.verificationValue5,
-        verificationValue6: selectedDevice.verificationValue6,
-        tolerance1: selectedDevice.tolerance1,
-        tolerance2: selectedDevice.tolerance2,
-        tolerance3: selectedDevice.tolerance3,
-        tolerance4: selectedDevice.tolerance4,
-        tolerance5: selectedDevice.tolerance5,
-        tolerance6: selectedDevice.tolerance6,
-        referenceDevice: defaultReferenceDevice.name,
-        referenceDeviceSerial: defaultReferenceDevice.serial,
-        referenceUncertainty1: defaultReferenceDevice.uncertainty1,
-        referenceUncertainty2: defaultReferenceDevice.uncertainty2,
-        referenceUncertainty3: defaultReferenceDevice.uncertainty3,
-        referenceUncertainty4: defaultReferenceDevice.uncertainty4,
-        referenceUncertainty5: defaultReferenceDevice.uncertainty5,
-        referenceUncertainty6: defaultReferenceDevice.uncertainty6,
+        deviceNumber: device.deviceCode,
+        deviceName: device.deviceName,
+        calibrationFrequency: device.calibrationFrequency || '',
+        lastCalibrationDate: device.calibrationDate ? new Date(device.calibrationDate).toISOString().split('T')[0] : '',
+        minRange: device.minRange?.toString() || '0',
+        maxRange: device.maxRange?.toString() || '0',
+        verificationValue1: device.verificationValues?.[0]?.toString() || '',
+        verificationValue2: device.verificationValues?.[1]?.toString() || '',
+        verificationValue3: device.verificationValues?.[2]?.toString() || '',
+        verificationValue4: device.verificationValues?.[3]?.toString() || '',
+        verificationValue5: device.verificationValues?.[4]?.toString() || '',
+        verificationValue6: device.verificationValues?.[5]?.toString() || '',
+        tolerance1: device.toleranceValues?.[0] || 0,
+        tolerance2: device.toleranceValues?.[1] || 0,
+        tolerance3: device.toleranceValues?.[2] || 0,
+        tolerance4: device.toleranceValues?.[3] || 0,
+        tolerance5: device.toleranceValues?.[4] || 0,
+        tolerance6: device.toleranceValues?.[5] || 0,
+        referenceDevice: defaultRef?.deviceName || '',
+        referenceDeviceSerial: defaultRef?.deviceCode || '',
+        referenceUncertainty1: defaultRef?.uncertaintyValues?.[0] || 0,
+        referenceUncertainty2: defaultRef?.uncertaintyValues?.[1] || 0,
+        referenceUncertainty3: defaultRef?.uncertaintyValues?.[2] || 0,
+        referenceUncertainty4: defaultRef?.uncertaintyValues?.[3] || 0,
+        referenceUncertainty5: defaultRef?.uncertaintyValues?.[4] || 0,
+        referenceUncertainty6: defaultRef?.uncertaintyValues?.[5] || 0,
       });
     }
   };
@@ -174,10 +186,50 @@ export function CalibrationEntry() {
     setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    alert('Kalibrasyon verisi başarıyla kaydedildi!');
-    navigate('/dashboard');
+    if (!selectedDeviceId || !selectedRefDeviceId) return;
+    setSubmitting(true);
+
+    try {
+      const points = [];
+      for (let i = 1; i <= 6; i++) {
+        const asc = measurements[`ascending${i}` as keyof MeasurementValues];
+        const desc = measurements[`descending${i}` as keyof MeasurementValues];
+        if (!asc || !desc) continue;
+        points.push({
+          pointNumber: i,
+          verificationValue: parseFloat(formData[`verificationValue${i}` as keyof CalibrationFormData] as string) || 0,
+          ascendingValue: parseFloat(asc),
+          descendingValue: parseFloat(desc),
+          tolerance: (formData as any)[`tolerance${i}`] || 0,
+          uncertainty: (formData as any)[`referenceUncertainty${i}`] || 0,
+        });
+      }
+
+      const calibration = await calibrationsApi.create({
+        deviceId: selectedDeviceId,
+        referenceDeviceId: selectedRefDeviceId,
+        calibrationDate: formData.newCalibrationDate ? new Date(formData.newCalibrationDate).toISOString() : new Date().toISOString(),
+        temperature: formData.temperature ? parseFloat(formData.temperature) : null,
+        humidity: formData.humidity ? parseFloat(formData.humidity) : null,
+        pressure: formData.pressure ? parseFloat(formData.pressure) : null,
+        calibratedBy: formData.calibratedBy,
+        measurementPoints: points,
+      });
+
+      // Upload files if any
+      for (const file of uploadedFiles) {
+        await filesApi.upload(calibration.id, file);
+      }
+
+      alert('Kalibrasyon verisi başarıyla kaydedildi ve onaya gönderildi!');
+      navigate('/dashboard');
+    } catch (err: any) {
+      alert('Hata: ' + (err.message || 'Kayıt başarısız'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const updateMeasurement = (field: keyof MeasurementValues, value: string) => {
@@ -218,9 +270,9 @@ export function CalibrationEntry() {
                   <SelectValue placeholder="Kalibrasyon yapılacak cihazı seçin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {testDevices.map((device) => (
-                    <SelectItem key={device.id} value={device.id}>
-                      {device.id} - {device.name}
+                  {testDevices.map((device: any) => (
+                    <SelectItem key={device.id} value={device.id.toString()}>
+                      {device.deviceCode} - {device.deviceName}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -394,8 +446,9 @@ export function CalibrationEntry() {
             {/* Submit Button */}
             {formData.deviceNumber && (
               <div className="flex justify-end pt-6">
-                <Button type="submit" className="h-14 px-12 text-lg bg-[#1F2A44] hover:bg-[#2d3d5f]">
-                  Kalibrasyon Kaydını Tamamla
+                <Button type="submit" disabled={submitting} className="h-14 px-12 text-lg bg-[#1F2A44] hover:bg-[#2d3d5f]">
+                  {submitting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+                  {submitting ? 'Kaydediliyor...' : 'Kalibrasyon Kaydını Tamamla'}
                 </Button>
               </div>
             )}

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, CheckCircle, XCircle, AlertCircle, FileText, Eye } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, AlertCircle, FileText, Eye, Loader2 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import { approvalsApi } from '../services/api';
 
 type ApprovalType = 'calibration' | 'device_update';
 type ApprovalStatus = 'pending' | 'approved' | 'rejected';
@@ -127,30 +128,80 @@ const mockApprovals: ApprovalItem[] = [
 export function ApprovalList() {
   const navigate = useNavigate();
   const { userRole } = useUser();
-  const [approvals, setApprovals] = useState<ApprovalItem[]>(mockApprovals);
+  const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [selectedType, setSelectedType] = useState<'all' | ApprovalType>('all');
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (userRole !== 'manager') {
       navigate('/dashboard');
+      return;
     }
+    loadApprovals();
   }, [userRole, navigate]);
+
+  const loadApprovals = async () => {
+    setLoading(true);
+    try {
+      const data = await approvalsApi.list();
+      setApprovals(data.map((a: any) => ({
+        id: a.id,
+        type: a.type as ApprovalType,
+        deviceCode: a.deviceCode || '',
+        deviceName: a.deviceName || '',
+        machineCode: a.machineName || '',
+        submittedBy: a.submittedBy,
+        submittedDate: new Date(a.submittedAt).toLocaleDateString('tr-TR'),
+        status: a.status as ApprovalStatus,
+        changes: a.changes,
+        calibrationResult: a.calibration?.overallStatus === 'Uygun' ? 'BAŞARILI - Tüm test noktaları tolerans içinde' :
+                          a.calibration?.overallStatus === 'Uygunsuz' ? 'OLUMSUZ - Test noktası tolerans dışında' : undefined,
+        measurements: a.calibration?.measurementPoints?.map((m: any) => ({
+          verificationValue: m.verificationValue?.toString() || '',
+          ascending: m.ascendingValue?.toString() || '',
+          descending: m.descendingValue?.toString() || '',
+          hysteresis: m.hysteresis?.toFixed(7) || '',
+          absoluteDifference: m.absoluteDifference?.toFixed(7) || '',
+          uncertainty: m.uncertainty || 0,
+          status: m.status === 'Uygun' ? 'UYGUN' as const : m.status === 'Uygunsuz' ? 'UYGUNSUZ' as const : 'BEKLİYOR' as const,
+        })),
+        environmentalConditions: a.calibration ? {
+          temperature: a.calibration.temperature?.toString() || '',
+          humidity: a.calibration.humidity?.toString() || '',
+          pressure: a.calibration.pressure?.toString() || '',
+        } : undefined,
+        referenceDevice: a.calibration?.referenceDeviceName,
+        referenceDeviceSerial: a.calibration?.referenceDeviceSerial,
+        calibratedBy: a.calibration?.calibratedBy,
+      })));
+    } catch {
+      // error
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (userRole !== 'manager') {
     return null;
   }
 
-  const handleApprove = (id: number) => {
-    setApprovals(prev =>
-      prev.map(item => item.id === id ? { ...item, status: 'approved' as ApprovalStatus } : item)
-    );
+  const handleApprove = async (id: number) => {
+    try {
+      await approvalsApi.approve(id);
+      setApprovals(prev => prev.filter(item => item.id !== id));
+    } catch (err: any) {
+      alert('Onaylama başarısız: ' + (err.message || 'Bilinmeyen hata'));
+    }
   };
 
-  const handleReject = (id: number) => {
-    setApprovals(prev =>
-      prev.map(item => item.id === id ? { ...item, status: 'rejected' as ApprovalStatus } : item)
-    );
+  const handleReject = async (id: number) => {
+    try {
+      await approvalsApi.reject(id);
+      setApprovals(prev => prev.filter(item => item.id !== id));
+    } catch (err: any) {
+      alert('Reddetme başarısız: ' + (err.message || 'Bilinmeyen hata'));
+    }
   };
 
   const filteredApprovals = approvals.filter(item => {

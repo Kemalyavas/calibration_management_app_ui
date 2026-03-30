@@ -3,35 +3,43 @@ import { useNavigate } from 'react-router';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { Disc } from 'lucide-react';
+import { Disc, Loader2 } from 'lucide-react';
 import { useUser } from '../contexts/UserContext';
+import { authApi } from '../services/api';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { setUserRole } = useUser();
+  const { loginWithToken, setUserRole } = useUser();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    // Kullanıcı kontrolü
-    if (username === 'operator' && password === 'asdfgh123') {
-      setUserRole('operator');
+    try {
+      const data = await authApi.login(username, password);
+      loginWithToken(data.token, data.username, data.fullName, data.role);
       navigate('/dashboard');
-    } else if (username === 'manager' && password === 'asdfgh456') {
-      setUserRole('manager');
-      navigate('/dashboard');
-    } else {
+    } catch {
       setError('Kullanıcı adı veya şifre hatalı!');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleGuestLogin = () => {
-    setUserRole('guest');
-    navigate('/guest-dashboard');
+  const handleGuestLogin = async () => {
+    try {
+      const data = await authApi.login('guest', 'guest123');
+      loginWithToken(data.token, data.username, data.fullName, data.role);
+      navigate('/guest-dashboard');
+    } catch {
+      setUserRole('guest');
+      navigate('/guest-dashboard');
+    }
   };
 
   return (
@@ -100,9 +108,11 @@ export function LoginPage() {
             <div className="space-y-3 pt-4">
               <Button
                 type="submit"
+                disabled={loading}
                 className="w-full h-14 text-lg bg-[#1F2A44] hover:bg-[#2d3d5f] rounded-xl"
               >
-                Giriş Yap
+                {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+                {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
               </Button>
               
               <Button
