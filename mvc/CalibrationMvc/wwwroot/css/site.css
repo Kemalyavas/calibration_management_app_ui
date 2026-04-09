@@ -1,0 +1,137 @@
+:root {
+    --primary-bg: #1F2A44;
+    --primary-text: #ffffff;
+    --accent: #4F46E5;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 0.9rem;
+}
+
+/* Sidebar */
+.sidebar {
+    background: var(--primary-bg);
+    min-height: 100vh;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.7);
+    transition: all 0.15s ease;
+    font-size: 0.875rem;
+}
+
+.nav-link:hover,
+.nav-link.active {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Kalan gün badge'leri */
+.badge-days-danger {
+    background: #dc3545;
+    color: white;
+}
+
+.badge-days-warning {
+    background: #ffc107;
+    color: black;
+}
+
+.badge-days-success {
+    background: #28a745;
+    color: white;
+}
+
+.badge-days-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+/* Ölçüm satır renkleri */
+.measurement-uygun {
+    background-color: #d4edda !important;
+}
+
+.measurement-uygunsuz {
+    background-color: #f8d7da !important;
+}
+
+/* Dashboard kartları */
+.dashboard-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+    min-height: 100px;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Login sayfası */
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-bg);
+}
+
+/* Tablo iyileştirmeleri */
+.table th {
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(79, 70, 229, 0.04);
+}
+
+/* Kod blokları */
+code {
+    color: #6d28d9;
+    background: #ede9fe;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.82em;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+    font-size: 0.8rem;
+}
+
+/* Kalibrasyon tablosu input'ları */
+.measurement-input {
+    font-size: 0.8rem;
+    min-width: 110px;
+}
+
+/* Card başlıkları */
+.card-header h6 {
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+}
+
+/* Accordion collapse animasyonu */
+.collapse {
+    transition: all 0.2s ease;
+}
+
+/* Scrollbar iyileştirme */
+.table-responsive::-webkit-scrollbar {
+    height: 6px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 3px;
+}
+
+/* Badge boyutu */
+.badge-sm {
+    font-size: 0.7rem;
+}

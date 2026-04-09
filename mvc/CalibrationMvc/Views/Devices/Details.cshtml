@@ -1,0 +1,190 @@
+@model CalibrationMvc.DTOs.DeviceDto
+@{
+    ViewData["Title"] = "Cihaz Detayı";
+    ViewData["BreadcrumbController"] = "Cihazlar";
+    ViewData["BreadcrumbPage"] = Model.DeviceName;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="fw-bold mb-0">
+            <i class="bi bi-cpu me-2"></i>@Model.DeviceName
+        </h5>
+        <small class="text-muted"><code>@Model.DeviceCode</code></small>
+    </div>
+    <div class="d-flex gap-2">
+        @if (User.IsInRole("Operator") || User.IsInRole("Manager"))
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-pencil me-1"></i>Düzenle
+            </a>
+            @if (Model.DeviceType != "reference")
+            {
+                <a asp-controller="Calibrations" asp-action="Create" asp-route-deviceId="@Model.Id"
+                   class="btn btn-outline-success btn-sm">
+                    <i class="bi bi-clipboard-check me-1"></i>Kalibrasyon Yap
+                </a>
+            }
+        }
+        <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Geri
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Cihaz Bilgileri</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted small" style="width: 40%;">Cihaz Kodu</td>
+                        <td class="fw-semibold small"><code>@Model.DeviceCode</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Cihaz Adı</td>
+                        <td class="fw-semibold small">@Model.DeviceName</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Cihaz Tipi</td>
+                        <td>
+                            <span class="badge @(Model.DeviceType == "reference" ? "bg-info text-dark" : "bg-secondary")">
+                                @(Model.DeviceType == "reference" ? "Referans" : "Test")
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Marka</td>
+                        <td class="small">@(Model.Brand ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Model</td>
+                        <td class="small">@(Model.Model ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Üretici</td>
+                        <td class="small">@(Model.Manufacturer ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Birim</td>
+                        <td class="small">@(Model.Unit ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Kullanım Yeri</td>
+                        <td class="small">@(Model.LocationOfUse ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Makine</td>
+                        <td class="small">@(Model.MachineName ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Departman</td>
+                        <td class="small">@(Model.DepartmentName ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Ölçüm Hassasiyeti</td>
+                        <td class="small">@(Model.MeasurementAccuracy ?? "-")</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Kalibrasyon Bilgileri</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted small" style="width: 50%;">Prosedür No</td>
+                        <td class="small">@(Model.ProcedureNumber ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Referans Kodu</td>
+                        <td class="small">@(Model.ReferenceCode ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Kalibre Eden</td>
+                        <td class="small">@(Model.CalibratedBy ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Frekans</td>
+                        <td class="small">@(Model.CalibrationFrequency ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Kalibrasyon Tarihi</td>
+                        <td class="small">@(Model.CalibrationDate?.ToString("dd.MM.yyyy") ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Sonraki Kalibrasyon</td>
+                        <td class="small fw-semibold">@(Model.NextCalibrationDate?.ToString("dd.MM.yyyy") ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Kalan Gün</td>
+                        <td>
+                            @if (Model.DaysRemaining.HasValue)
+                            {
+                                var d = Model.DaysRemaining.Value;
+                                var cls = d < 0 ? "bg-danger" : d < 7 ? "bg-danger" : d <= 15 ? "bg-warning text-dark" : "bg-success";
+                                <span class="badge @cls">@(d < 0 ? $"{Math.Abs(d)} gün geçti" : $"{d} gün")</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">Belirsiz</span>
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Min / Max Aralık</td>
+                        <td class="small">@Model.MinRange — @Model.MaxRange</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Teknik Tolerans</td>
+                        <td class="small">@(Model.TechnicalTolerance ?? "-")</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Doğrulama Değerleri -->
+        @if (Model.VerificationValues.Any(v => v.HasValue))
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-2">
+                    <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Doğrulama Değerleri</h6>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-3 small">#</th>
+                                <th class="small">Değer</th>
+                                <th class="small">Tolerans</th>
+                                <th class="small">Belirsizlik</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.VerificationValues.Length; i++)
+                            {
+                                if (Model.VerificationValues[i].HasValue)
+                                {
+                                    <tr>
+                                        <td class="px-3 small">@(i + 1)</td>
+                                        <td class="small">@Model.VerificationValues[i]</td>
+                                        <td class="small">@(i < Model.ToleranceValues.Length ? Model.ToleranceValues[i]?.ToString() : "-")</td>
+                                        <td class="small">@(i < Model.UncertaintyValues.Length ? Model.UncertaintyValues[i]?.ToString() : "-")</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Prometeon Kalibrasyon</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+
+<div class="d-flex" style="min-height: 100vh;">
+    <!-- Sidebar -->
+    <nav class="sidebar d-flex flex-column p-3" style="width: 240px; min-width: 240px;">
+        <a class="navbar-brand text-white fw-bold fs-5 mb-4 d-block text-decoration-none" asp-controller="Dashboard" asp-action="Index">
+            <i class="bi bi-rulers me-2"></i>Prometeon<br/>
+            <small class="fw-normal fs-6 opacity-75">Kalibrasyon</small>
+        </a>
+
+        <ul class="nav flex-column gap-1">
+            <li class="nav-item">
+                <a class="nav-link rounded px-3 py-2 @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")"
+                   asp-controller="Dashboard" asp-action="Index">
+                    <i class="bi bi-house me-2"></i>Anasayfa
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded px-3 py-2 @(ViewContext.RouteData.Values["controller"]?.ToString() == "Devices" && ViewContext.RouteData.Values["action"]?.ToString() == "Index" ? "active" : "")"
+                   asp-controller="Devices" asp-action="Index">
+                    <i class="bi bi-cpu me-2"></i>Cihaz Listesi
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link rounded px-3 py-2 @(ViewContext.RouteData.Values["controller"]?.ToString() == "Procedures" ? "active" : "")"
+                   asp-controller="Procedures" asp-action="Index">
+                    <i class="bi bi-file-text me-2"></i>Prosedürler
+                </a>
+            </li>
+
+            @if (User.IsInRole("Operator") || User.IsInRole("Manager"))
+            {
+                <li class="nav-item mt-2">
+                    <small class="text-white-50 px-3 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.08em;">İşlemler</small>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded px-3 py-2 @(ViewContext.RouteData.Values["controller"]?.ToString() == "Devices" && ViewContext.RouteData.Values["action"]?.ToString() == "Create" ? "active" : "")"
+                       asp-controller="Devices" asp-action="Create">
+                        <i class="bi bi-plus-circle me-2"></i>Cihaz Ekle
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link rounded px-3 py-2 @(ViewContext.RouteData.Values["controller"]?.ToString() == "Calibrations" ? "active" : "")"
+                       asp-controller="Calibrations" asp-action="Create">
+                        <i class="bi bi-clipboard-check me-2"></i>Kalibrasyon Girişi
+                    </a>
+                </li>
+            }
+
+            @if (User.IsInRole("Manager"))
+            {
+                <li class="nav-item">
+                    <a class="nav-link rounded px-3 py-2 @(ViewContext.RouteData.Values["controller"]?.ToString() == "Approvals" ? "active" : "")"
+                       asp-controller="Approvals" asp-action="Index">
+                        <i class="bi bi-check2-square me-2"></i>Onay Bekleyenler
+                        @if (ViewBag.PendingCount != null && (int)ViewBag.PendingCount > 0)
+                        {
+                            <span class="badge bg-danger rounded-pill ms-1">@ViewBag.PendingCount</span>
+                        }
+                    </a>
+                </li>
+            }
+        </ul>
+
+        <div class="mt-auto pt-3 border-top border-white border-opacity-25">
+            <div class="text-white-50 small mb-2 px-2">
+                <i class="bi bi-person-circle me-1"></i>
+                @(User.Identity?.Name ?? "Misafir")
+                @if (User.IsInRole("Manager"))
+                {
+                    <span class="badge bg-warning text-dark ms-1" style="font-size: 0.65rem;">YÖNETİCİ</span>
+                }
+                else if (User.IsInRole("Operator"))
+                {
+                    <span class="badge bg-info text-dark ms-1" style="font-size: 0.65rem;">OPERATÖR</span>
+                }
+            </div>
+            <form asp-controller="Account" asp-action="Logout" method="post">
+                <button type="submit" class="btn btn-outline-light btn-sm w-100">
+                    <i class="bi bi-box-arrow-right me-1"></i>Çıkış
+                </button>
+            </form>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="flex-grow-1 d-flex flex-column" style="background: #f8f9fa; min-height: 100vh;">
+        <!-- Top bar -->
+        <div class="bg-white border-bottom px-4 py-2 d-flex align-items-center justify-content-between">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0 small">
+                    <li class="breadcrumb-item"><a asp-controller="Dashboard" asp-action="Index" class="text-decoration-none">Anasayfa</a></li>
+                    @if (ViewData["BreadcrumbController"] != null)
+                    {
+                        <li class="breadcrumb-item"><a href="#" class="text-decoration-none">@ViewData["BreadcrumbController"]</a></li>
+                    }
+                    @if (ViewData["BreadcrumbPage"] != null)
+                    {
+                        <li class="breadcrumb-item active">@ViewData["BreadcrumbPage"]</li>
+                    }
+                </ol>
+            </nav>
+            <small class="text-muted">@DateTime.Now.ToString("dd.MM.yyyy HH:mm")</small>
+        </div>
+
+        <!-- Page content -->
+        <main class="flex-grow-1 p-4">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-triangle me-2"></i>@TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            @RenderBody()
+        </main>
+
+        <footer class="text-center text-muted small py-2 border-top bg-white">
+            &copy; @DateTime.Now.Year Prometeon Kalibrasyon Yönetim Sistemi
+        </footer>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+@RenderSection("Scripts", required: false)
+</body>
+</html>

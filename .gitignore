@@ -9,3 +9,8 @@ backend/src/CalibrationApi.Infrastructure/bin/
 backend/src/CalibrationApi.Infrastructure/obj/
 backend/src/CalibrationApi.Infrastructure/Migrations/
 backend/uploads/
+
+# MVC project
+mvc/CalibrationMvc/bin/
+mvc/CalibrationMvc/obj/
+mvc/CalibrationMvc/uploads/

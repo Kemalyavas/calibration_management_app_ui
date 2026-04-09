@@ -1,0 +1,277 @@
+@model CalibrationFormViewModel
+@{
+    ViewData["Title"] = "Kalibrasyon Girişi";
+    ViewData["BreadcrumbController"] = "Kalibrasyonlar";
+    ViewData["BreadcrumbPage"] = "Yeni Giriş";
+    var selectedDevice = Model.SelectedDevice;
+    var form = Model.Form;
+    int pointCount = selectedDevice?.VerificationValues?.Length > 0
+        ? selectedDevice.VerificationValues.Count(v => v.HasValue)
+        : 6;
+    if (pointCount == 0) pointCount = 6;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="fw-bold mb-0"><i class="bi bi-clipboard-check me-2"></i>Kalibrasyon Girişi</h5>
+    <a asp-action="Index" asp-controller="Devices" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Cihaz Listesi
+    </a>
+</div>
+
+<!-- Cihaz seçimi -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-3">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold mb-1">Test Cihazı Seçin <span class="text-danger">*</span></label>
+                <select id="deviceSelect" class="form-select">
+                    <option value="">-- Cihaz seçiniz --</option>
+                    @foreach (var d in Model.TestDevices)
+                    {
+                        <option value="@d.Id" selected="@(selectedDevice?.Id == d.Id)">
+                            [@d.DeviceCode] @d.DeviceName
+                        </option>
+                    }
+                </select>
+            </div>
+            @if (selectedDevice != null)
+            {
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-4">
+                            <div class="text-muted small">Cihaz No</div>
+                            <div class="fw-semibold small"><code>@selectedDevice.DeviceCode</code></div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">Frekans</div>
+                            <div class="fw-semibold small">@(selectedDevice.CalibrationFrequency ?? "-")</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">Son Kalibrasyon</div>
+                            <div class="fw-semibold small">@(selectedDevice.CalibrationDate?.ToString("dd.MM.yyyy") ?? "-")</div>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-4">
+                            <div class="text-muted small">Min Aralık</div>
+                            <div class="fw-semibold small">@selectedDevice.MinRange</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">Max Aralık</div>
+                            <div class="fw-semibold small">@selectedDevice.MaxRange</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">Birim</div>
+                            <div class="fw-semibold small">@(selectedDevice.Unit ?? "-")</div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (selectedDevice != null)
+{
+    <form asp-action="Create" method="post" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Form.DeviceId" value="@selectedDevice.Id" />
+
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <!-- Referans Cihaz -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Referans Cihaz</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-semibold">Referans Cihaz <span class="text-danger">*</span></label>
+                                <select name="Form.ReferenceDeviceId" id="referenceDeviceSelect" class="form-select" required>
+                                    <option value="">-- Referans cihaz seçin --</option>
+                                    @foreach (var rd in Model.ReferenceDevices)
+                                    {
+                                        <option value="@rd.Id" selected="@(Model.SelectedReferenceDevice?.Id == rd.Id)">
+                                            [@rd.DeviceCode] @rd.DeviceName
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-muted small">Cihaz Adı</div>
+                                <div class="fw-semibold small" id="refDeviceName">
+                                    @(Model.SelectedReferenceDevice?.DeviceName ?? "-")
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-muted small">Cihaz Kodu</div>
+                                <div class="fw-semibold small" id="refDeviceCode">
+                                    @(Model.SelectedReferenceDevice?.DeviceCode ?? "-")
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ölçüm Noktaları -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom py-2 d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Ölçüm Noktaları</h6>
+                        <div>
+                            <span class="text-muted small me-2">Genel Durum:</span>
+                            <span id="overall-status" class="badge bg-secondary fs-6">Bekliyor</span>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-sm mb-0 align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="text-center px-2 small" style="width: 40px;">#</th>
+                                        <th class="small">Doğrulama Değeri</th>
+                                        <th class="small">Artan Değer</th>
+                                        <th class="small">Azalan Değer</th>
+                                        <th class="small">Histerezis</th>
+                                        <th class="small">Mutlak Fark</th>
+                                        <th class="small">Tolerans</th>
+                                        <th class="small text-center">Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < pointCount; i++)
+                                    {
+                                        var vv = (i < selectedDevice.VerificationValues.Length && selectedDevice.VerificationValues[i].HasValue)
+                                            ? selectedDevice.VerificationValues[i]!.Value : 0m;
+                                        var tv = (i < selectedDevice.ToleranceValues.Length && selectedDevice.ToleranceValues[i].HasValue)
+                                            ? selectedDevice.ToleranceValues[i]!.Value : 0m;
+                                        var uv = (i < selectedDevice.UncertaintyValues.Length && selectedDevice.UncertaintyValues[i].HasValue)
+                                            ? selectedDevice.UncertaintyValues[i]!.Value : 0m;
+
+                                        <tr>
+                                            <td class="text-center small fw-semibold">@(i + 1)</td>
+                                            <td class="small">
+                                                <span id="ver_@i" data-value="@vv">@vv</span>
+                                                <input type="hidden" name="Form.MeasurementPoints[@i].PointNumber" value="@(i + 1)" />
+                                                <input type="hidden" name="Form.MeasurementPoints[@i].VerificationValue" value="@vv" />
+                                                <input type="hidden" name="Form.MeasurementPoints[@i].Tolerance" value="@tv" id="tol_@i" data-value="@tv" />
+                                                <input type="hidden" name="Form.MeasurementPoints[@i].Uncertainty" value="@uv" id="unc_@i" data-value="@uv" />
+                                            </td>
+                                            <td>
+                                                <input type="number" step="any"
+                                                       id="asc_@i"
+                                                       name="Form.MeasurementPoints[@i].AscendingValue"
+                                                       class="form-control form-control-sm measurement-input"
+                                                       data-point="@i"
+                                                       placeholder="0.0000000" />
+                                            </td>
+                                            <td>
+                                                <input type="number" step="any"
+                                                       id="desc_@i"
+                                                       name="Form.MeasurementPoints[@i].DescendingValue"
+                                                       class="form-control form-control-sm measurement-input"
+                                                       data-point="@i"
+                                                       placeholder="0.0000000" />
+                                            </td>
+                                            <td class="small text-end">
+                                                <span id="hys_@i">—</span>
+                                                <input type="hidden" id="hid_hys_@i" name="Form.MeasurementPoints[@i].Hysteresis" value="0" />
+                                            </td>
+                                            <td class="small text-end">
+                                                <span id="abs_@i">—</span>
+                                                <input type="hidden" id="hid_abs_@i" name="Form.MeasurementPoints[@i].AbsoluteDifference" value="0" />
+                                            </td>
+                                            <td class="small text-end">
+                                                <span class="text-muted">±@tv</span>
+                                            </td>
+                                            <td class="text-center">
+                                                <span id="status_@i" class="badge bg-secondary">Bekliyor</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Ortam Şartları -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Ortam Şartları</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Sıcaklık (°C)</label>
+                            <input type="number" step="0.1" name="Form.Temperature"
+                                   value="@form.Temperature" class="form-control" placeholder="23.5" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Nem (%)</label>
+                            <input type="number" step="0.1" name="Form.Humidity"
+                                   value="@form.Humidity" class="form-control" placeholder="55" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Basınç (hPa)</label>
+                            <input type="number" step="0.1" name="Form.Pressure"
+                                   value="@form.Pressure" class="form-control" placeholder="1013" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kalibrasyon Bilgileri -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Kalibrasyon Bilgileri</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Tarih <span class="text-danger">*</span></label>
+                            <input type="date" name="Form.CalibrationDate"
+                                   value="@(form.CalibrationDate == default ? DateTime.Today.ToString("yyyy-MM-dd") : form.CalibrationDate.ToString("yyyy-MM-dd"))"
+                                   class="form-control" required />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Kalibrasyonu Yapan <span class="text-danger">*</span></label>
+                            <input type="text" name="Form.CalibratedBy"
+                                   value="@form.CalibratedBy" class="form-control"
+                                   placeholder="Ad Soyad" required />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dosya Yükleme -->
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white border-bottom py-2">
+                        <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Dosya Yükleme</h6>
+                    </div>
+                    <div class="card-body">
+                        <label class="form-label small fw-semibold">Kalibrasyon Sertifikası / Eklentiler</label>
+                        <input type="file" name="Files" class="form-control form-control-sm" multiple
+                               accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls,.doc,.docx" />
+                        <div class="form-text small">PDF, görsel, Excel veya Word dosyaları yükleyebilirsiniz.</div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-check2-circle me-1"></i>Kalibrasyonu Kaydet
+                </button>
+            </div>
+        </div>
+    </form>
+}
+else
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-clipboard-check text-muted" style="font-size: 3rem; opacity: 0.4;"></i>
+            <p class="text-muted mt-3">Kalibrasyon girişi yapmak için lütfen üstten bir test cihazı seçin.</p>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/calibration-form.js"></script>
+}

@@ -1,0 +1,187 @@
+@model CalibrationMvc.DTOs.CalibrationDto
+@{
+    ViewData["Title"] = "Kalibrasyon Detayı";
+    ViewData["BreadcrumbController"] = "Kalibrasyonlar";
+    ViewData["BreadcrumbPage"] = "Detay";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="fw-bold mb-0"><i class="bi bi-clipboard-check me-2"></i>Kalibrasyon Detayı</h5>
+        <small class="text-muted">@Model.CalibrationDate.ToString("dd.MM.yyyy") — @Model.DeviceName</small>
+    </div>
+    <a href="javascript:history.back()" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Geri
+    </a>
+</div>
+
+<div class="row g-3 mb-3">
+    <!-- Cihaz Bilgileri -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Test Cihazı</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted small">Cihaz Kodu</td>
+                        <td class="small"><code>@Model.DeviceCode</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Cihaz Adı</td>
+                        <td class="small fw-semibold">@Model.DeviceName</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Kalibre Eden</td>
+                        <td class="small">@Model.CalibratedBy</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Tarih</td>
+                        <td class="small">@Model.CalibrationDate.ToString("dd.MM.yyyy")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Genel Durum</td>
+                        <td>
+                            <span class="badge @(Model.OverallStatus == "Uygun" ? "bg-success" : Model.OverallStatus == "Uygunsuz" ? "bg-danger" : "bg-secondary")">
+                                @Model.OverallStatus
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Kayıt Eden</td>
+                        <td class="small">@Model.CreatedByUserName</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Kayıt Tarihi</td>
+                        <td class="small">@Model.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Referans Cihaz -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Referans Cihaz</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted small">Cihaz Adı</td>
+                        <td class="small fw-semibold">@Model.ReferenceDeviceName</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Seri No</td>
+                        <td class="small"><code>@Model.ReferenceDeviceSerial</code></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ortam Şartları -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Ortam Şartları</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted small">Sıcaklık</td>
+                        <td class="small fw-semibold">@(Model.Temperature.HasValue ? $"{Model.Temperature} °C" : "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Nem</td>
+                        <td class="small fw-semibold">@(Model.Humidity.HasValue ? $"{Model.Humidity} %" : "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Basınç</td>
+                        <td class="small fw-semibold">@(Model.Pressure.HasValue ? $"{Model.Pressure} hPa" : "-")</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ölçüm Noktaları -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white border-bottom py-2">
+        <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Ölçüm Noktaları</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered table-sm mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-center px-2 small">#</th>
+                        <th class="small">Doğrulama</th>
+                        <th class="small">Artan</th>
+                        <th class="small">Azalan</th>
+                        <th class="small">Histerezis</th>
+                        <th class="small">Mutlak Fark</th>
+                        <th class="small">Tolerans</th>
+                        <th class="small">Belirsizlik</th>
+                        <th class="small text-center">Durum</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var mp in Model.MeasurementPoints.OrderBy(p => p.PointNumber))
+                    {
+                        var rowClass = mp.Status == "Uygunsuz" ? "measurement-uygunsuz" : mp.Status == "Uygun" ? "measurement-uygun" : "";
+                        <tr class="@rowClass">
+                            <td class="text-center small fw-semibold">@mp.PointNumber</td>
+                            <td class="small">@mp.VerificationValue</td>
+                            <td class="small">@mp.AscendingValue.ToString("F7")</td>
+                            <td class="small">@mp.DescendingValue.ToString("F7")</td>
+                            <td class="small">@mp.Hysteresis.ToString("F7")</td>
+                            <td class="small">@mp.AbsoluteDifference.ToString("F7")</td>
+                            <td class="small">±@mp.Tolerance</td>
+                            <td class="small">@mp.Uncertainty</td>
+                            <td class="text-center">
+                                <span class="badge @(mp.Status == "Uygun" ? "bg-success" : mp.Status == "Uygunsuz" ? "bg-danger" : "bg-secondary")">
+                                    @mp.Status
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Dosyalar -->
+@if (Model.Files.Any())
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom py-2">
+            <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Eklenen Dosyalar</h6>
+        </div>
+        <div class="card-body">
+            <div class="list-group list-group-flush">
+                @foreach (var file in Model.Files)
+                {
+                    <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="bi bi-file-earmark me-2 text-muted"></i>
+                            <span class="small">@file.FileName</span>
+                            <span class="text-muted small ms-2">(@((file.FileSize / 1024.0).ToString("F1")) KB)</span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted small">@file.UploadedAt.ToString("dd.MM.yyyy")</span>
+                            <a asp-controller="Files" asp-action="Download" asp-route-id="@file.Id"
+                               class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+}

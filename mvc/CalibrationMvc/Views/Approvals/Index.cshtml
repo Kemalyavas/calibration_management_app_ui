@@ -1,0 +1,186 @@
+@model List<CalibrationMvc.DTOs.ApprovalDto>
+@{
+    ViewData["Title"] = "Onay Bekleyenler";
+    ViewData["BreadcrumbController"] = "Onaylar";
+    ViewData["BreadcrumbPage"] = "Liste";
+    string? filterType = ViewBag.TypeFilter as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="fw-bold mb-0"><i class="bi bi-check2-square me-2"></i>Onay Bekleyenler</h5>
+    @if (Model.Any())
+    {
+        <span class="badge bg-danger rounded-pill">@Model.Count bekleyen</span>
+    }
+</div>
+
+<!-- Filtre tab'ları -->
+<ul class="nav nav-tabs mb-3">
+    <li class="nav-item">
+        <a class="nav-link text-dark @(string.IsNullOrEmpty(filterType) ? "active fw-bold" : "")"
+           asp-action="Index">
+            Tümü
+            <span class="badge bg-secondary ms-1">@Model.Count</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link text-dark @(filterType == "calibration" ? "active fw-bold" : "")"
+           asp-action="Index" asp-route-typeFilter="calibration">
+            Kalibrasyonlar
+            <span class="badge bg-secondary ms-1">@Model.Count(a => a.Type == "calibration")</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link text-dark @(filterType == "device_update" ? "active fw-bold" : "")"
+           asp-action="Index" asp-route-typeFilter="device_update">
+            Cihaz Güncellemeleri
+            <span class="badge bg-secondary ms-1">@Model.Count(a => a.Type == "device_update")</span>
+        </a>
+    </li>
+</ul>
+
+@if (!Model.Any())
+{
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-check2-circle text-success" style="font-size: 3rem;"></i>
+            <p class="text-muted mt-3 mb-0">Onay bekleyen kayıt bulunmuyor.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="accordion" id="approvalAccordion">
+        @foreach (var approval in Model)
+        {
+            var typeLabel = approval.Type == "calibration" ? "Kalibrasyon" : "Cihaz Güncelleme";
+            var typeBadge = approval.Type == "calibration" ? "bg-primary" : "bg-info text-dark";
+            var calibration = approval.Calibration;
+
+            <div class="card border-0 shadow-sm mb-2">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="d-flex align-items-start gap-3">
+                            <div>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="badge @typeBadge">@typeLabel</span>
+                                    <span class="fw-semibold small">@(approval.DeviceName ?? "-")</span>
+                                    <code class="small text-muted">@approval.DeviceCode</code>
+                                </div>
+                                <div class="text-muted small">
+                                    <i class="bi bi-person me-1"></i>@approval.SubmittedBy
+                                    <span class="mx-2">·</span>
+                                    <i class="bi bi-clock me-1"></i>@approval.SubmittedAt.ToString("dd.MM.yyyy HH:mm")
+                                    @if (!string.IsNullOrEmpty(approval.MachineName))
+                                    {
+                                        <span class="mx-2">·</span>
+                                        <i class="bi bi-gear me-1"></i>@approval.MachineName
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button class="btn btn-outline-secondary btn-sm" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#detail-@approval.Id">
+                                <i class="bi bi-chevron-down"></i> Detay
+                            </button>
+                            <form asp-action="Approve" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@approval.Id" />
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="bi bi-check2 me-1"></i>Onayla
+                                </button>
+                            </form>
+                            <form asp-action="Reject" method="post" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@approval.Id" />
+                                <button type="submit" class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Bu kaydı reddetmek istediğinize emin misiniz?')">
+                                    <i class="bi bi-x me-1"></i>Reddet
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Genişletilen detay -->
+                    <div class="collapse mt-3" id="detail-@approval.Id">
+                        <hr class="my-2" />
+                        @if (calibration != null && calibration.MeasurementPoints.Any())
+                        {
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <small class="text-muted d-block">Referans Cihaz</small>
+                                    <span class="small fw-semibold">@calibration.ReferenceDeviceName</span>
+                                    @if (!string.IsNullOrEmpty(calibration.ReferenceDeviceSerial))
+                                    {
+                                        <small class="text-muted ms-1">(@calibration.ReferenceDeviceSerial)</small>
+                                    }
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted d-block">Sıcaklık</small>
+                                    <span class="small fw-semibold">@(calibration.Temperature.HasValue ? $"{calibration.Temperature} °C" : "-")</span>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted d-block">Nem</small>
+                                    <span class="small fw-semibold">@(calibration.Humidity.HasValue ? $"{calibration.Humidity} %" : "-")</span>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted d-block">Basınç</small>
+                                    <span class="small fw-semibold">@(calibration.Pressure.HasValue ? $"{calibration.Pressure} hPa" : "-")</span>
+                                </div>
+                                <div class="col-md-2">
+                                    <small class="text-muted d-block">Kalibre Eden</small>
+                                    <span class="small fw-semibold">@calibration.CalibratedBy</span>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered mb-0 align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="small text-center">#</th>
+                                            <th class="small">Doğrulama</th>
+                                            <th class="small">Artan</th>
+                                            <th class="small">Azalan</th>
+                                            <th class="small">Histerezis</th>
+                                            <th class="small">Mutlak Fark</th>
+                                            <th class="small">Tolerans</th>
+                                            <th class="small text-center">Durum</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var mp in calibration.MeasurementPoints.OrderBy(p => p.PointNumber))
+                                        {
+                                            var rowClass = mp.Status == "Uygunsuz" ? "measurement-uygunsuz" : mp.Status == "Uygun" ? "measurement-uygun" : "";
+                                            <tr class="@rowClass">
+                                                <td class="text-center small">@mp.PointNumber</td>
+                                                <td class="small">@mp.VerificationValue</td>
+                                                <td class="small">@mp.AscendingValue.ToString("F4")</td>
+                                                <td class="small">@mp.DescendingValue.ToString("F4")</td>
+                                                <td class="small">@mp.Hysteresis.ToString("F4")</td>
+                                                <td class="small">@mp.AbsoluteDifference.ToString("F4")</td>
+                                                <td class="small">±@mp.Tolerance</td>
+                                                <td class="text-center">
+                                                    <span class="badge @(mp.Status == "Uygun" ? "bg-success" : mp.Status == "Uygunsuz" ? "bg-danger" : "bg-secondary")">
+                                                        @mp.Status
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                        else if (!string.IsNullOrEmpty(approval.Changes))
+                        {
+                            <div class="bg-light rounded p-3">
+                                <small class="text-muted d-block mb-1 fw-semibold">Değişiklikler:</small>
+                                <pre class="mb-0 small" style="white-space: pre-wrap;">@approval.Changes</pre>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

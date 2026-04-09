@@ -1,0 +1,129 @@
+@model CalibrationMvc.DTOs.ProcedureDto
+@{
+    ViewData["Title"] = Model.Name;
+    ViewData["BreadcrumbController"] = "Prosedürler";
+    ViewData["BreadcrumbPage"] = Model.ProcedureNumber;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h5 class="fw-bold mb-0"><i class="bi bi-file-text me-2"></i>@Model.Name</h5>
+        <small class="text-muted">
+            <code>@Model.ProcedureNumber</code>
+            @if (!string.IsNullOrEmpty(Model.Version))
+            {
+                <span class="badge bg-light text-dark border ms-2">v@Model.Version</span>
+            }
+            @if (!string.IsNullOrEmpty(Model.CalibrationTypeName))
+            {
+                <span class="text-muted ms-2">· @Model.CalibrationTypeName</span>
+            }
+        </small>
+    </div>
+    <a asp-action="Index" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Listeye Dön
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-8">
+        <!-- Amaç -->
+        @if (!string.IsNullOrEmpty(Model.Purpose))
+        {
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-white border-bottom py-2">
+                    <h6 class="mb-0 fw-semibold small text-muted text-uppercase">
+                        <i class="bi bi-bullseye me-1"></i>Amaç
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0 small" style="line-height: 1.7;">@Model.Purpose</p>
+                </div>
+            </div>
+        }
+
+        <!-- İçerik (numaralı liste) -->
+        @if (!string.IsNullOrEmpty(Model.Content))
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-2">
+                    <h6 class="mb-0 fw-semibold small text-muted text-uppercase">
+                        <i class="bi bi-list-ol me-1"></i>Prosedür Adımları
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @{
+                        var steps = Model.Content.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                    }
+                    <ol class="mb-0">
+                        @foreach (var step in steps)
+                        {
+                            if (!string.IsNullOrWhiteSpace(step))
+                            {
+                                <li class="small mb-2" style="line-height: 1.6;">@step.Trim()</li>
+                            }
+                        }
+                    </ol>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Bilgi kartı -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white border-bottom py-2">
+                <h6 class="mb-0 fw-semibold small text-muted text-uppercase">Bilgiler</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-borderless mb-0">
+                    <tr>
+                        <td class="text-muted small">Prosedür No</td>
+                        <td class="small"><code>@Model.ProcedureNumber</code></td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Adı</td>
+                        <td class="small fw-semibold">@Model.Name</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Versiyon</td>
+                        <td class="small">@(Model.Version ?? "-")</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Tip</td>
+                        <td class="small">@(Model.CalibrationTypeName ?? "-")</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Ekipman Listesi -->
+        @if (!string.IsNullOrEmpty(Model.EquipmentList))
+        {
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom py-2">
+                    <h6 class="mb-0 fw-semibold small text-muted text-uppercase">
+                        <i class="bi bi-tools me-1"></i>Gerekli Ekipmanlar
+                    </h6>
+                </div>
+                <div class="card-body">
+                    @{
+                        var equipments = Model.EquipmentList.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                    }
+                    <ul class="list-unstyled mb-0">
+                        @foreach (var eq in equipments)
+                        {
+                            if (!string.IsNullOrWhiteSpace(eq))
+                            {
+                                <li class="small mb-1 d-flex align-items-start gap-2">
+                                    <i class="bi bi-check2 text-success mt-1 flex-shrink-0"></i>
+                                    @eq.Trim()
+                                </li>
+                            }
+                        }
+                    </ul>
+                </div>
+            </div>
+        }
+    </div>
+</div>

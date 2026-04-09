@@ -1,0 +1,102 @@
+@model LoginViewModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Giriş";
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prometeon Kalibrasyon - Giriş</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+    <style>
+        :root { --primary-bg: #1F2A44; --accent: #4F46E5; }
+        body { background: var(--primary-bg); font-family: 'Segoe UI', sans-serif; }
+        .login-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .login-logo {
+            background: linear-gradient(135deg, #1F2A44, #4F46E5);
+            border-radius: 12px;
+            width: 64px; height: 64px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .btn-primary-custom {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+        .btn-primary-custom:hover { background: #3730a3; border-color: #3730a3; }
+    </style>
+</head>
+<body>
+<div class="min-vh-100 d-flex align-items-center justify-content-center p-3">
+    <div class="login-card p-4 p-md-5" style="width: 100%; max-width: 420px;">
+        <div class="text-center mb-4">
+            <div class="login-logo mx-auto mb-3">
+                <i class="bi bi-rulers text-white fs-3"></i>
+            </div>
+            <h4 class="fw-bold mb-1" style="color: #1F2A44;">Prometeon Kalibrasyon</h4>
+            <p class="text-muted small">Yönetim Sistemine Giriş Yapın</p>
+        </div>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-danger py-2 small">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <div asp-validation-summary="All"></div>
+            </div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="alert alert-danger py-2 small">
+                <i class="bi bi-exclamation-triangle me-1"></i>@TempData["Error"]
+            </div>
+        }
+
+        <form asp-controller="Account" asp-action="Login" method="post">
+            <div class="mb-3">
+                <label asp-for="Username" class="form-label fw-semibold small"></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-person"></i></span>
+                    <input asp-for="Username" class="form-control" placeholder="Kullanıcı adınızı girin" autocomplete="username" />
+                </div>
+                <span asp-validation-for="Username" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Password" class="form-label fw-semibold small"></label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                    <input asp-for="Password" class="form-control" placeholder="Şifrenizi girin" autocomplete="current-password" />
+                </div>
+                <span asp-validation-for="Password" class="text-danger small"></span>
+            </div>
+
+            <button type="submit" class="btn btn-primary-custom btn-primary w-100 fw-semibold mb-3">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Giriş Yap
+            </button>
+        </form>
+
+        <hr class="my-3" />
+
+        <div class="text-center">
+            <p class="text-muted small mb-2">Misafir olarak devam et:</p>
+            <form asp-controller="Account" asp-action="Login" method="post">
+                <input type="hidden" name="Username" value="guest" />
+                <input type="hidden" name="Password" value="guest123" />
+                <button type="submit" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-eye me-1"></i>Misafir Girişi (Salt Okunur)
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

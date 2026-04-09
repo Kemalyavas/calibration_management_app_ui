@@ -1,0 +1,22 @@
+@{
+    ViewData["Title"] = "Erişim Reddedildi";
+}
+
+<div class="d-flex align-items-center justify-content-center" style="min-height: 60vh;">
+    <div class="text-center">
+        <div class="mb-4">
+            <i class="bi bi-shield-x text-warning" style="font-size: 5rem;"></i>
+        </div>
+        <h2 class="fw-bold">Erişim Reddedildi</h2>
+        <p class="text-muted mb-1">Bu sayfayı görüntülemek için yetkiniz bulunmuyor.</p>
+        <p class="text-muted mb-4 small">Yetki gerektiren bir işlem yapmaya çalıştınız. Yöneticinizle iletişime geçin.</p>
+        <div class="d-flex justify-content-center gap-2">
+            <a asp-controller="Dashboard" asp-action="Index" class="btn btn-primary">
+                <i class="bi bi-house me-1"></i>Anasayfaya Dön
+            </a>
+            <a href="javascript:history.back()" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Geri
+            </a>
+        </div>
+    </div>
+</div>
