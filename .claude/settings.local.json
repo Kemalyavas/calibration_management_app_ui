@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sqlcmd -S localhost -Q \"SELECT @@VERSION\" -C)",
+      "Bash(dotnet ef:*)"
+    ]
+  }
+}

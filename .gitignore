@@ -1,16 +1,10 @@
-node_modules/
-dist/
-.env
-backend/src/CalibrationApi.API/bin/
-backend/src/CalibrationApi.API/obj/
-backend/src/CalibrationApi.Core/bin/
-backend/src/CalibrationApi.Core/obj/
-backend/src/CalibrationApi.Infrastructure/bin/
-backend/src/CalibrationApi.Infrastructure/obj/
-backend/src/CalibrationApi.Infrastructure/Migrations/
-backend/uploads/
+# .NET build artifacts
+bin/
+obj/
 
-# MVC project
-mvc/CalibrationMvc/bin/
-mvc/CalibrationMvc/obj/
-mvc/CalibrationMvc/uploads/
+# Runtime
+uploads/
+
+# Visual Studio
+.vs/
+*.user
